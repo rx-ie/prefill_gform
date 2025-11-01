@@ -1,0 +1,144 @@
+!pip install requests icalendar
+import requests
+from icalendar import Calendar
+from datetime import datetime, timedelta
+import urllib.parse
+
+def get_calendar_events(ics_url):
+    """Fetch and parse the ICS calendar"""
+    response = requests.get(ics_url)
+    response.raise_for_status()
+
+    cal = Calendar.from_ical(response.content)
+    events = []
+
+    for component in cal.walk():
+        if component.name == "VEVENT":
+            event_date = component.get('dtstart').dt
+            event_summary = str(component.get('summary'))
+
+            # Handle both date and datetime objects
+            if hasattr(event_date, 'date'):
+                event_date = event_date.date()
+
+            events.append({
+                'date': event_date,
+                'summary': event_summary
+            })
+
+    return sorted(events, key=lambda x: x['date'])
+
+def get_next_week_events(events, start_date):
+    """Get events for the next Monday to Saturday"""
+    # Find the next Monday
+    days_until_monday = (7 - start_date.weekday()) % 7
+    if days_until_monday == 0:  # If today is Monday, get next Monday
+        days_until_monday = 7
+
+    next_monday = start_date + timedelta(days=days_until_monday)
+
+    week_events = []
+    for i in range(6):  # Monday to Saturday
+        current_date = next_monday + timedelta(days=i)
+
+        # Find the liturgical event for this date
+        day_event = next((e for e in events if e['date'] == current_date), None)
+
+        if day_event:
+            liturgical_name = day_event['summary']
+        else:
+            # Fallback if no event found
+            liturgical_name = f"{current_date.strftime('%A')} - Weekday"
+
+        week_events.append({
+            'date': current_date,
+            'liturgical_name': liturgical_name,
+            'formatted_date': current_date.strftime('%d %B %Y')
+        })
+
+    return week_events
+
+def generate_prefilled_form_urls(week_events, form_url, day_field_id, date_field_id):
+    """Generate prefilled Google Form URLs"""
+    prefilled_urls = []
+
+    for event in week_events:
+        # Create the prefilled parameters
+        params = {
+            day_field_id: event['liturgical_name'],  # The liturgical description
+            date_field_id: event['formatted_date']    # The formatted date
+        }
+
+        # Build the URL with parameters
+        prefilled_url = f"{form_url}?{urllib.parse.urlencode(params)}"
+        prefilled_urls.append({
+            'liturgical': event['liturgical_name'],
+            'date': event['formatted_date'],
+            'url': prefilled_url
+        })
+
+    return prefilled_urls
+
+def main():
+    # Calendar URL
+    ics_url = "CALENDAR URL" #Calendar URL here
+
+    # Your Google Form configuration
+    FORM_URL = "FORM URL" #Google Form URL here
+    DAY_FIELD_ID = "day field ID"    # Replace with your day field ID
+    DATE_FIELD_ID = "date field ID"   # Replace with your date field ID
+
+    try:
+        # Get current date
+        today = datetime.now().date()
+
+        # Fetch calendar events
+        print("Fetching liturgical calendar...")
+        events = get_calendar_events(ics_url)
+
+        # Get next week's events (Monday to Saturday)
+        print("Processing next week's liturgical events...")
+        week_events = get_next_week_events(events, today)
+
+        # Display the events
+        print("\nNext week's liturgical calendar:")
+        print("-" * 80)
+        for event in week_events:
+            print(f"Day: {event['liturgical_name']}")
+            print(f"Date: {event['formatted_date']}")
+            print("-" * 80)
+
+        # Generate prefilled form URLs
+        print("\nGenerating prefilled form URLs...")
+        prefilled_urls = generate_prefilled_form_urls(
+            week_events,
+            FORM_URL,
+            DAY_FIELD_ID,
+            DATE_FIELD_ID
+        )
+
+        # Display the URLs
+        print("\nPrefilled Google Form URLs:")
+        print("=" * 80)
+        for item in prefilled_urls:
+            print(f"\nDay: {item['liturgical']}")
+            print(f"Date: {item['date']}")
+            print(f"URL: {item['url']}")
+            print("-" * 80)
+
+        # Save to file for easy copying
+        with open('prefilled_form_urls.txt', 'w') as f:
+            f.write(f"Prefilled Form URLs for Week Starting {week_events[0]['formatted_date']}\n")
+            f.write("=" * 80 + "\n\n")
+            for item in prefilled_urls:
+                f.write(f"Day: {item['liturgical']}\n")
+                f.write(f"Date: {item['date']}\n")
+                f.write(f"{item['url']}\n\n")
+
+        print(f"\nURLs saved to 'prefilled_form_urls.txt'")
+
+    except Exception as e:
+        print(f"Error: {e}")
+
+if __name__ == "__main__":
+    main()
