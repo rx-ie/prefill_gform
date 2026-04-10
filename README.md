@@ -1,10 +1,15 @@
-Created in a religious context, you could potentially use this to extract any kind of event descriptions from any Google calendar. You need the calendar URL, form URL, and the field IDs (in the format entry.*****). 
+# Liturgical Calendar Google Form Pre-Filler
 
+Fetches liturgical calendar events from an ICS feed and generates
+pre-filled Google Form URLs for the upcoming week (Monday–Saturday).
 
-That's it! Running the code parses the Google calendar, extracts the event name and date for each day, then uses the info to create URLs that automatically prefill the forms exactly where they should.
+## Features
+- Parses any standard `.ics` calendar URL
+- Identifies the next Monday–Saturday window
+- Generates pre-filled Google Form links with the liturgical day name and date
+- Saves output to `prefilled_form_urls.txt`
 
-
-Finally, it saves a text file with 6 URLs that you can use to enter each prefilled form and quickly fill up the rest of the info.
-
-
-Enjoy the convenience of not having to copy the event descriptions and dates anymore!
+## Prerequisites
+- Python 3.7+
+- A publicly accessible ICS calendar URL
+- A Google Form with pre-fillable fields
